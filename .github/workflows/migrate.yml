@@ -73,7 +73,7 @@ jobs:
           # Normalize inherited whitespace without changing CSS rules or runtime code.
           node --input-type=module <<'CLEAN'
           import fs from "node:fs";
-          for (const path of ["app/template.css", "public/template-runtime.js"]) {
+          for (const path of ["app/template.css", "app/master-template.tsx", "app/layout.tsx", "app/page.tsx", "public/template-runtime.js", "site-data.mjs", "template-rules.mjs", "scripts/validate-site.mjs", "tests/rules.test.mjs", "tests/scenarios.test.mjs", "tests/template.test.mjs"]) {
             const original = fs.readFileSync(path, "utf8");
             fs.writeFileSync(path, original.replace(/[ \t]+$/gm, "").replace(/\n+$/, "\n"));
           }
