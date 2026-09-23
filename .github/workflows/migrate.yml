@@ -45,8 +45,9 @@ jobs:
 
           # Keep only the new, single-build pipeline. Never import the old CNAME
           # or duplicate the portfolio files at the repository root.
-          mv pages.workflow .github/workflows/pages.yml
-          rm .github/workflows/migrate.yml
+          # Workflow changes are applied separately by the authorized GitHub connection.
+          test -f pages.workflow
+          test -f .github/workflows/migrate.yml
 
           node --input-type=module <<'NODE'
           import fs from "node:fs";
