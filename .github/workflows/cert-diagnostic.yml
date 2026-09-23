@@ -55,6 +55,7 @@ jobs:
           print("TOTAL_ROWS", len(data))
           print("UNIQUE_CERTS_LAST_7_DAYS", len(uniq))
           print("LETS_ENCRYPT_UNIQUE_LAST_7_DAYS", len(le))
-          for row in sorted(le, key=lambda x: x.get("not_before",""), reverse=True)[:80]:
-              print("CERT", row.get("not_before"), row.get("name_value"), row.get("issuer_name"), row.get("serial_number"))
+          print("=== NEWEST 25 CERTIFICATE ROWS ===")
+          for row in sorted(data, key=lambda x: x.get("not_before",""), reverse=True)[:25]:
+              print("NEWEST", row.get("not_before"), row.get("name_value"), row.get("issuer_name"), row.get("serial_number"))
           PY
