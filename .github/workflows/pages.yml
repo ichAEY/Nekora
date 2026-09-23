@@ -20,45 +20,61 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    env:
-      NEXT_PUBLIC_BASE_PATH: /Nekora
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+      - name: Require GitHub Pages and read the configured custom domain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! pages_json="$(gh api "repos/$GITHUB_REPOSITORY/pages" 2>&1)"; then
+            echo "::error::GitHub Pages is disabled or inaccessible. Open Settings > Pages and choose Source: GitHub Actions. No deployment has happened."
+            printf '%s\n' "$pages_json"
+            exit 1
+          fi
+          custom_domain="$(printf '%s' "$pages_json" | jq -r '.cname // empty')"
+          echo "PAGES_CUSTOM_DOMAIN=$custom_domain" >> "$GITHUB_ENV"
+          if [ -n "$custom_domain" ]; then
+            echo "Pages custom domain configured: $custom_domain"
+          else
+            echo "::notice::No custom domain yet: building the GitHub preview URL."
+          fi
+      - name: Select correct preview or custom-domain asset paths
+        run: node scripts/resolve-pages-target.mjs
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - name: Check static export and image assets
+      - name: Validate the published export, canonical URL and local images
         shell: bash
         run: |
           set -euo pipefail
           test -s out/index.html
           test -s out/assets/lyudmila/master.webp
-          test -s out/assets/lyudmila/portfolio/galery00002.webp
-          test -s out/assets/lyudmila/portfolio/galery00007.webp
+          test -s out/assets/lyudmila/masterpc.webp
           test -s out/assets/lyudmila/shablonLED.webp
+          for img in public/assets/lyudmila/portfolio/*.webp; do
+            test -s "out/assets/lyudmila/portfolio/${img##*/}"
+          done
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html = fs.readFileSync('out/index.html', 'utf8');
+          const canonical = process.env.NEXT_PUBLIC_SITE_URL;
+          const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+          if (!canonical || !html.includes(canonical)) throw new Error('Canonical URL does not match target');
+          if (base && !html.includes(base + '/_next/')) throw new Error('Preview scripts lost the repository prefix');
+          if (!base && html.includes('"/Nekora/_next/')) throw new Error('Custom-domain scripts still use the preview prefix');
+          NODE
           cp out/index.html out/404.html
           touch out/.nojekyll
-      - name: Check whether Pages is enabled
-        id: pages-check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh api "repos/${{ github.repository }}/pages" >/dev/null 2>&1; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Enable Settings > Pages > GitHub Actions to publish this site."
-          fi
-      - if: steps.pages-check.outputs.enabled == 'true'
-        uses: actions/configure-pages@v5
-      - if: steps.pages-check.outputs.enabled == 'true'
-        uses: actions/upload-pages-artifact@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: out
-      - if: steps.pages-check.outputs.enabled == 'true'
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

@@ -1,15 +1,20 @@
 # Nekora — TANEM
 
-Чистая независимая копия сайта **Людмилы Некоры** из `ichAEY/lyudmila-nekora`. Исходный проект оставлен без изменений. Здесь сохранены сайт, локальные фотографии, стили и тесты, но не перенесены старый `CNAME`, дубли изображений и усложнённый сценарий публикации.
+Независимая версия сайта Людмилы Некоры. Исходный репозиторий `ichAEY/lyudmila-nekora` не изменяется. Здесь оставлены исходники, необходимые изображения, тесты и один GitHub Pages workflow — без старого `CNAME` и двух отдельных сборок.
 
-## Включение сайта
+## Публикация
 
-1. Откройте [Settings → Pages](https://github.com/ichAEY/Nekora/settings/pages) и выберите в разделе **Build and deployment → Source** значение **GitHub Actions**.
-2. Откройте [Actions → Nekora quality and Pages](https://github.com/ichAEY/Nekora/actions/workflows/pages.yml), нажмите **Run workflow** для `main` и убедитесь, что публикация завершилась успешно.
-3. После успешной публикации проверьте предварительный адрес: https://ichaey.github.io/Nekora/ .
+1. В [Settings → Pages](https://github.com/ichAEY/Nekora/settings/pages) выберите **Source: GitHub Actions**. Без этого pipeline **явно завершается ошибкой** вместо ложного статуса Success без публикации.
+2. Перейдите в [Actions](https://github.com/ichAEY/Nekora/actions/workflows/pages.yml) и запустите **Run workflow** для `main`.
+3. Пока пользовательский домен не задан, сайт публикуется по адресу `https://ichaey.github.io/Nekora/` и использует префикс `/Nekora`.
 
-До включения GitHub Pages предварительный адрес может не открываться. Репозиторий уже успешно прошёл тесты, сборку и проверку фотографий; GitHub Pages активируется отдельно.
+## Как подключить собственный домен
 
-## Подключение нового домена
+1. Сначала добавьте выбранный домен в **Settings → Pages → Custom domain**. Не используйте адрес, который ещё назначен другому Pages-репозиторию: сначала подготовьте перенос на отдельном домене или спланируйте переключение.
+2. Для выбранного субдомена в DNS создайте единственную соответствующую запись **CNAME → ichaey.github.io** (без `/Nekora`). Уберите противоречащие `A`, `AAAA`, `ALIAS` или дополнительные `CNAME` для **этого же имени**. Не удаляйте общие записи `tanem.ru` или чужих сайтов.
+3. Pipeline автоматически прочитает домен из GitHub Pages API, соберёт сайт **без** префикса `/Nekora` и укажет верный HTTPS canonical URL. Отдельно редактировать код и добавлять файл `CNAME` не требуется.
+4. Проверьте DNS в Settings → Pages. Когда GitHub выдаст сертификат, включите **Enforce HTTPS**. Если после исправления DNS сертификат не создаётся, GitHub рекомендует удалить и повторно добавить Custom domain, чтобы перезапустить проверку.
 
-Не переносите старые DNS-записи и не удаляйте исходный сайт, пока новая публикация не работает. Для нового субдомена в зоне `tanem.ru` потребуется `CNAME` на `ichaey.github.io` и совпадающее значение **Custom domain** в настройках Pages; реальное имя нового субдомена ещё не выбрано. Перед публикацией на собственном домене нужно отдельно заменить предварительный `seo.siteUrl` в `site-data.mjs` и убрать `NEXT_PUBLIC_BASE_PATH: /Nekora` в `.github/workflows/pages.yml`, чтобы ресурсы загружались из корня домена. Проверяйте DNS и HTTPS уже после этих изменений.
+**Важно:** корректная сборка сама не выдаёт TLS-сертификат. DNS-записи, права на домен и HTTPS на стороне GitHub проверяются отдельно; не переключайте основной адрес, пока новая публикация не проверена.
+
+[GitHub: custom domains](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site) · [GitHub: HTTPS](https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https)
