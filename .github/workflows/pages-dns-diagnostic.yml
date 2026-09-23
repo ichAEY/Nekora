@@ -1,0 +1,30 @@
+name: Pages DNS diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages-dns-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query GitHub Pages DNS health
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -u
+          echo "Repository: $GITHUB_REPOSITORY"
+          for i in 1 2 3 4 5; do
+            echo "=== DNS health attempt $i ==="
+            curl -sS -D -               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$GITHUB_REPOSITORY/pages/health" || true
+            echo
+            sleep 12
+          done
