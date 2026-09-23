@@ -26,6 +26,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Select GitHub preview as default build target
+        run: node scripts/resolve-pages-target.mjs
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
       - name: Require GitHub Pages and read the configured custom domain
         env:
           GH_TOKEN: ${{ github.token }}
@@ -44,11 +49,12 @@ jobs:
           else
             echo "::notice::No custom domain yet: building the GitHub preview URL."
           fi
-      - name: Select correct preview or custom-domain asset paths
+      - name: Switch to root-relative assets when a custom domain exists
+        if: env.PAGES_CUSTOM_DOMAIN != ''
         run: node scripts/resolve-pages-target.mjs
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
+      - name: Rebuild only when publishing at a custom domain
+        if: env.PAGES_CUSTOM_DOMAIN != ''
+        run: npm run build
       - name: Validate the published export, canonical URL and local images
         shell: bash
         run: |
