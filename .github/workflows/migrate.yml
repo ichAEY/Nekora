@@ -20,7 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: false
       - name: Copy the verified source without old DNS and deployment configuration
         shell: bash
         run: |
