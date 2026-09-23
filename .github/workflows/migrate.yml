@@ -1,0 +1,106 @@
+name: One-time Nekora clean migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/migrate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: false
+      - name: Copy the verified source without old DNS and deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/ichAEY/lyudmila-nekora.git "$RUNNER_TEMP/nekora-source"
+          src="$RUNNER_TEMP/nekora-source"
+          expected="c2cacff03d5173e57118f56e40e280eb3b76e847"
+          actual="$(git -C "$src" rev-parse HEAD)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::The source site changed since verification. Refusing to copy an unreviewed revision."
+            exit 1
+          fi
+
+          mkdir -p app public/assets scripts tests .github/workflows
+          cp -a "$src/app/." app/
+          cp -a "$src/public/assets/lyudmila" public/assets/
+          cp "$src/public/template-runtime.js" "$src/public/placeholder.svg" public/
+          for file in .gitignore eslint.config.mjs next.config.ts package-lock.json package.json postcss.config.mjs site-data.mjs template-rules.mjs tsconfig.json; do
+            cp "$src/$file" "./$file"
+          done
+          cp "$src/scripts/validate-site.mjs" scripts/
+          cp "$src/tests/"*.test.mjs tests/
+
+          # Keep only the new, single-build pipeline. Never import the old CNAME
+          # or duplicate the portfolio files at the repository root.
+          mv pages.workflow .github/workflows/pages.yml
+          rm .github/workflows/migrate.yml
+
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const replaceOnce = (path, oldText, newText) => {
+            const original = fs.readFileSync(path, "utf8");
+            if (original.split(oldText).length !== 2) {
+              throw new Error("Expected exactly one occurrence in " + path + ": " + oldText);
+            }
+            fs.writeFileSync(path, original.replace(oldText, newText));
+          };
+          replaceOnce("site-data.mjs", "https://nekora.tanem.ru/", "https://ichaey.github.io/Nekora/");
+          replaceOnce("app/layout.tsx", 'alternates: { canonical: "/" }', "alternates: { canonical: site.seo.siteUrl }");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          pkg.name = "nekora-site";
+          pkg.displayName = "TANEM — Некора Людмила";
+          delete pkg.scripts["qa:scenarios"];
+          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          lock.name = "nekora-site";
+          lock.packages[""].name = "nekora-site";
+          fs.writeFileSync("package-lock.json", JSON.stringify(lock, null, 2) + "\n");
+          NODE
+
+          test -s public/assets/lyudmila/portfolio/galery00002.webp
+          test -s public/assets/lyudmila/portfolio/galery00007.webp
+          test -s public/assets/lyudmila/shablonLED.webp
+          test ! -e CNAME
+          test ! -e public/CNAME
+          test ! -e scripts/qa-scenario-builds.mjs
+      - name: Install and verify the unmodified site
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run lint
+          npm test
+      - name: Verify the clean /Nekora Pages build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /Nekora
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s out/index.html
+          test -s out/assets/lyudmila/master.webp
+          test -s out/assets/lyudmila/portfolio/galery00002.webp
+          test -s out/assets/lyudmila/portfolio/galery00007.webp
+          test -s out/assets/lyudmila/shablonLED.webp
+      - name: Commit only the production source, tests, and new workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Migrate clean Nekora site and independent GitHub Pages pipeline"
+          git push origin HEAD:main
