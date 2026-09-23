@@ -9,22 +9,76 @@ on:
 
 permissions:
   contents: read
-  pages: write
 
 jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Query GitHub Pages DNS health
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: DNS and TLS diagnostics
         shell: bash
         run: |
-          set -u
-          echo "Repository: $GITHUB_REPOSITORY"
-          for i in 1 2 3 4 5; do
-            echo "=== DNS health attempt $i ==="
-            curl -sS -D -               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$GITHUB_REPOSITORY/pages/health" || true
+          set +e
+          bad="lyudmila-nekora.tanem.ru"
+          good="dima.tanem.ru"
+
+          echo "=== resolver ==="
+          cat /etc/resolv.conf
+          echo
+
+          echo "=== tools ==="
+          command -v dig || true
+          command -v host || true
+          command -v nslookup || true
+          command -v curl || true
+          command -v openssl || true
+          echo
+
+          for name in "$bad" "$good"; do
+            echo "############################"
+            echo "HOST: $name"
+            echo "############################"
+
+            echo "--- system resolution ---"
+            getent ahosts "$name" || true
+
+            if command -v dig >/dev/null 2>&1; then
+              echo "--- CNAME default resolver ---"
+              dig "$name" CNAME +noall +answer +comments || true
+              echo "--- CNAME Google 8.8.8.8 ---"
+              dig @8.8.8.8 "$name" CNAME +noall +answer +comments || true
+              echo "--- CNAME Cloudflare 1.1.1.1 ---"
+              dig @1.1.1.1 "$name" CNAME +noall +answer +comments || true
+              echo "--- A ---"
+              dig "$name" A +noall +answer +comments || true
+              echo "--- AAAA ---"
+              dig "$name" AAAA +noall +answer +comments || true
+              echo "--- CAA exact host ---"
+              dig "$name" CAA +noall +answer +authority +comments || true
+              echo "--- DNSSEC CNAME ---"
+              dig "$name" CNAME +dnssec +noall +answer +authority +comments || true
+            fi
+
+            echo "--- HTTP headers ---"
+            curl -sS -I --max-time 15 "http://$name/" || true
+            echo "--- HTTPS headers (verification on) ---"
+            curl -sS -I --max-time 15 "https://$name/" || true
+            echo "--- HTTPS verbose certificate summary ---"
+            echo | openssl s_client -connect "$name:443" -servername "$name" -brief 2>&1 | head -80 || true
             echo
-            sleep 12
           done
+
+          if command -v dig >/dev/null 2>&1; then
+            echo "=== tanem.ru authoritative NS ==="
+            dig tanem.ru NS +noall +answer +comments || true
+            echo "=== tanem.ru CAA ==="
+            dig tanem.ru CAA +noall +answer +authority +comments || true
+            echo "=== tanem.ru DNSSEC / DS ==="
+            dig tanem.ru DS +dnssec +noall +answer +authority +comments || true
+
+            for ns in $(dig tanem.ru NS +short); do
+              echo "=== authoritative $ns : bad host ==="
+              dig @"$ns" "$bad" CNAME +noall +answer +authority +comments || true
+              echo "=== authoritative $ns : good host ==="
+              dig @"$ns" "$good" CNAME +noall +answer +authority +comments || true
+            done
+          fi
