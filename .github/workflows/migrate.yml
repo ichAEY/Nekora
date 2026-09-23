@@ -70,6 +70,8 @@ jobs:
           fs.writeFileSync("package-lock.json", JSON.stringify(lock, null, 2) + "\n");
           NODE
 
+          # Remove two trailing-space artifacts inherited from the old stylesheet.
+          sed -i 's/[[:blank:]]\\+$//' app/template.css
           test -s public/assets/lyudmila/portfolio/galery00002.webp
           test -s public/assets/lyudmila/portfolio/galery00007.webp
           test -s public/assets/lyudmila/shablonLED.webp
