@@ -27,6 +27,8 @@ test("Lyudmila Nekora client data is configured", () => {
   assert.equal(site.contacts.phoneDisplay, "+7 (924) 825-21-25");
   assert.equal(site.reviews.length, 17);
   assert.equal(site.reputation.reviewCount, "17");
+  assert.equal(site.template.reviewSource, "Авито");
+  assert.ok(site.reviews.every(({source}) => source === "Авито"));
   assert.match(site.images.favicon, /favicon-source\.png$/);
   assert.ok(fs.existsSync("public/favicon-source.png"));
   assert.equal(site.images.gallery.length, 10);

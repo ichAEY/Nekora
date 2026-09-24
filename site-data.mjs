@@ -9,7 +9,7 @@ export default {
   template: {
     specialty: "lashes",
     bookingProvider: "",
-    reviewSource: "",
+    reviewSource: "Авито",
   },
 
   brand: {
