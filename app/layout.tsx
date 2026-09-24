@@ -7,7 +7,7 @@ import "@fontsource/manrope/400.css";
 import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import "./template.css";
-import "./nekora-fixes.css";
+import "./nekora-review.css";
 import site from "../site-data.mjs";
 
 export const metadata: Metadata = {

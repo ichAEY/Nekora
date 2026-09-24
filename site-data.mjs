@@ -151,7 +151,6 @@ export default {
       en: {
         "Некора Людмила": "Lyudmila Nekora",
         "Людмила": "Lyudmila",
-        "Отзывы клиентов": "Client reviews",
         "Мастер по LED-наращиванию ресниц": "LED eyelash extension specialist",
         "мастер по LED-наращиванию ресниц": "LED eyelash extension specialist",
         "LED-наращивание ресниц": "LED eyelash extensions",

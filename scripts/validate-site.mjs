@@ -29,8 +29,7 @@ for (const [label, value] of arrays) {
   if (!Array.isArray(value)) fail(`${label} must be an array`);
 }
 
-// Некора: заказчик предоставил 17 отдельных отзывов (включая фото-дубликат Дианы).
-if (site.reviews.length > 17) fail("Nekora has 17 verified review screenshots; verify any additions before publishing");
+if (site.reviews.length > 9) fail("publish at most 9 verified reviews");
 for (const [index, review] of site.reviews.entries()) {
   if (!String(review?.author || "").trim()) fail(`review ${index + 1} must have the verified author`);
   if (!String(review?.text || "").trim()) fail(`review ${index + 1} must have the verbatim source text`);

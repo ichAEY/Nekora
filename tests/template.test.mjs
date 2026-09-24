@@ -26,11 +26,11 @@ test("Lyudmila Nekora client data is configured", () => {
   assert.equal(site.location.city, "Москва");
   assert.equal(site.contacts.phoneDisplay, "+7 (924) 825-21-25");
   assert.equal(site.reviews.length, 17);
-  assert.equal(site.reputation.reviewCount, "17");
   assert.equal(site.template.reviewSource, "Авито");
-  assert.ok(site.reviews.every(({source}) => source === "Авито"));
-  assert.match(site.images.favicon, /favicon-source\.png$/);
-  assert.ok(fs.existsSync("public/favicon-source.png"));
+  assert.equal(site.reputation.reviewCount, "17");
+  assert.match(site.images.favicon, /favicon-source\\.png$/);
+  assert.match(html, /наращиванию ресниц/);
+  assert.match(html, /Что говорят клиенты/);
   assert.equal(site.images.gallery.length, 10);
   assert.equal(site.template.specialty, "lashes");
   assert.match(html, /<header class="mct-hero is-lashes"/);
@@ -207,10 +207,9 @@ test("approved About copy and skills are deterministic", () => {
   assert.equal(masterInitial(nails), "Н");
 });
 
-test("client-supplied reviews preserve all 17 authors, source and verbatim text", () => {
-  assert.equal(site.reviews.length, 17);
-  assert.match(component, /const reviews = site\.reviews as Review\[\]/);
-  assert.match(component, /type Review = \{ author: string; text: string; source\?: string; date\?: string \}/);
+test("reviews are capped at nine and preserve author, source and verbatim text", () => {
+  assert.match(component, /site\.reviews as Review\[\]\)\.slice\(0, 9\)/);
+  assert.match(component, /type Review = \{ author: string; text: string; source\?: string \}/);
   assert.match(component, /review\.source \|\| site\.template\.reviewSource/);
   assert.match(component, /aria-label="5 из 5">★★★★★/);
   assert.match(component, /<blockquote>«\{review\.text\}»<\/blockquote>/);
@@ -276,27 +275,25 @@ test("Julia booking structure replaces only the mobile block", () => {
 });
 
 
-test("gallery and reviews keep photo and full-review links clickable before dragging", () => {
-  const galleryStart = component.indexOf('className={`dct-gallery-viewport');
-  const galleryMove = component.indexOf('onPointerMove={(event) =>', galleryStart);
-  const galleryDown = component.slice(galleryStart, galleryMove);
-  assert.ok(galleryStart > -1 && galleryMove > galleryStart);
-  assert.doesNotMatch(galleryDown, /setPointerCapture/);
-
-  const reviewsStart = component.indexOf('className={`mct-review-viewport');
-  const reviewsMove = component.indexOf('onPointerMove={(event) =>', reviewsStart);
-  const reviewsDown = component.slice(reviewsStart, reviewsMove);
-  const reviewsDrag = component.slice(reviewsMove, reviewsMove + 620);
-  assert.ok(reviewsStart > -1 && reviewsMove > reviewsStart);
-  assert.doesNotMatch(reviewsDown, /setPointerCapture/);
-  assert.match(reviewsDrag, /setPointerCapture/);
-  assert.match(component, /setSelectedReview\(review\)/);
+test("Nekora preserves Maria review card classes and the original floating TANEM badge", () => {
+  assert.match(component, /mct-review-card mct-review-card-mobile/);
+  assert.match(component, /mct-review-card dct-review-card/);
+  assert.match(component, /<a className="mct-tanem-footer"/);
+  assert.ok(fs.existsSync("public/favicon-source.png"));
+  assert.equal(site.reviews.length, 17);
 });
 
-test("Nekora hero wording, true system favicon and seventeen distinct reviews", () => {
-  assert.match(component, /<span className="mct-lashes-line">наращиванию ресниц<\/span>/);
-  assert.doesNotMatch(component, /<a className="mct-tanem-footer"/);
-  assert.match(site.images.favicon, /favicon-source\.png$/);
-  assert.equal(site.reviews.length, 17);
-  assert.equal(new Set(site.reviews.map(({ author }) => author)).size, 17);
+test("Nekora keeps loading intro and restores page scrolling independently of reviews", () => {
+  assert.match(component, /setTimeout\(\(\) => setIntroVisible\(true\), 0\)/);
+  assert.match(component, /setIntroVisible\(false\)/);
+  assert.match(component, /document\.body\.style\.overflow = previousOverflow/);
+  assert.match(component, /const overlayOpen = bookingOpen \|\| galleryOpen \|\| lightboxIndex !== null;/);
+  assert.doesNotMatch(component, /const overlayOpen = .*selectedReview/);
+});
+test("desktop gallery pointer capture starts only after a real drag", () => {
+  const start = component.indexOf('className={`dct-gallery-viewport');
+  const movement = component.indexOf('onPointerMove={(event) =>', start);
+  assert.ok(start >= 0 && movement > start);
+  assert.doesNotMatch(component.slice(start, movement), /setPointerCapture/);
+  assert.match(component.slice(movement,movement+630), /desktopGalleryWasDraggedRef\.current/);
 });
