@@ -44,3 +44,12 @@
   background:#f1e8e1; color:#312723; font-size:26px; cursor:pointer;
 }
 .nekora-review-close:focus-visible { outline: 2px solid #715b53; outline-offset: 3px; }
+
+
+/* Nekora: make the Avito source label about 10% more visible without changing Maria card geometry. */
+.dct-review-card-head > strong small {
+  font-size: 11px !important;
+}
+.mct-review-card-mobile .mct-mobile-review-source {
+  font-size: 9.35px !important;
+}
