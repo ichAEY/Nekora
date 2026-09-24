@@ -66,4 +66,4 @@ jobs:
           done
           echo "::group::Domain ownership TXT"
           dig +short TXT _github-pages-challenge-ichAEY.tanem.ru @1.1.1.1
-          echo "::endgroup::
+          echo "::endgroup::"
