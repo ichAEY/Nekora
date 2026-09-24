@@ -272,3 +272,29 @@ test("Julia booking structure replaces only the mobile block", () => {
   assert.match(mobileDetails, /site\.location\.schedule/);
   assert.doesNotMatch(mobileDetails, /mct-mobile-route-card|mct-map-wrap/);
 });
+
+
+test("gallery and reviews keep photo and full-review links clickable before dragging", () => {
+  const galleryStart = component.indexOf('className={`dct-gallery-viewport');
+  const galleryMove = component.indexOf('onPointerMove={(event) =>', galleryStart);
+  const galleryDown = component.slice(galleryStart, galleryMove);
+  assert.ok(galleryStart > -1 && galleryMove > galleryStart);
+  assert.doesNotMatch(galleryDown, /setPointerCapture/);
+
+  const reviewsStart = component.indexOf('className={`mct-review-viewport');
+  const reviewsMove = component.indexOf('onPointerMove={(event) =>', reviewsStart);
+  const reviewsDown = component.slice(reviewsStart, reviewsMove);
+  const reviewsDrag = component.slice(reviewsMove, reviewsMove + 620);
+  assert.ok(reviewsStart > -1 && reviewsMove > reviewsStart);
+  assert.doesNotMatch(reviewsDown, /setPointerCapture/);
+  assert.match(reviewsDrag, /setPointerCapture/);
+  assert.match(component, /setSelectedReview\(review\)/);
+});
+
+test("Nekora hero wording, true system favicon and seventeen distinct reviews", () => {
+  assert.match(component, /<span className="mct-lashes-line">наращиванию ресниц<\/span>/);
+  assert.doesNotMatch(component, /<a className="mct-tanem-footer"/);
+  assert.match(site.images.favicon, /favicon-source\.png$/);
+  assert.equal(site.reviews.length, 17);
+  assert.equal(new Set(site.reviews.map(({ author }) => author)).size, 17);
+});

@@ -1538,10 +1538,8 @@ export default function MasterTemplate() {
             aria-label={`Настоящие отзывы клиентов ${site.master.genitive}. Лента движется автоматически, при касании останавливается.`}
             onPointerDown={(event) => {
               if (!event.isPrimary) return;
+              // Keep the original click target until movement exceeds the drag threshold.
               pauseReviews(event.clientX);
-              if (event.pointerType === "mouse" && window.matchMedia("(min-width: 768px)").matches && !event.currentTarget.hasPointerCapture(event.pointerId)) {
-                event.currentTarget.setPointerCapture(event.pointerId);
-              }
             }}
             onPointerMove={(event) => {
               if (!event.isPrimary || !reviewsPausedRef.current) return;
