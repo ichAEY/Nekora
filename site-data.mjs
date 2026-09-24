@@ -183,7 +183,7 @@ export default {
     },
   },
 
-  reviews,
+  reviews: reviews.slice(0, 9),
   promotions: [],
   amenities: [],
 
