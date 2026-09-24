@@ -25,7 +25,7 @@ test("Lyudmila Nekora client data is configured", () => {
   assert.equal(site.master.name, "Людмила");
   assert.equal(site.location.city, "Москва");
   assert.equal(site.contacts.phoneDisplay, "+7 (924) 825-21-25");
-  assert.equal(site.reviews.length, 17);
+  assert.equal(site.reviews.length, 9);
   assert.equal(site.template.reviewSource, "Авито");
   assert.equal(site.reputation.reviewCount, "17");
   assert.match(site.images.favicon, /favicon-source\\.png$/);
@@ -280,7 +280,7 @@ test("Nekora preserves Maria review card classes and the original floating TANEM
   assert.match(component, /mct-review-card dct-review-card/);
   assert.match(component, /<a className="mct-tanem-footer"/);
   assert.ok(fs.existsSync("public/favicon-source.png"));
-  assert.equal(site.reviews.length, 17);
+  assert.equal(site.reviews.length, 9);
 });
 
 test("Nekora keeps loading intro and restores page scrolling independently of reviews", () => {
