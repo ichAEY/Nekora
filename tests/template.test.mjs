@@ -209,7 +209,7 @@ test("approved About copy and skills are deterministic", () => {
 
 test("reviews are capped at nine and preserve author, source and verbatim text", () => {
   assert.match(component, /site\.reviews as Review\[\]\)\.slice\(0, 9\)/);
-  assert.match(component, /type Review = \\{ author: string; text: string; source\\?: string; date\\?: string \\}/);
+  assert.match(component, /type Review = \{ author: string; text: string; source\?: string; date\?: string \};/);
   assert.match(component, /review\.source \|\| site\.template\.reviewSource/);
   assert.match(component, /aria-label="5 из 5">★★★★★/);
   assert.match(component, /<blockquote>«\{review\.text\}»<\/blockquote>/);
