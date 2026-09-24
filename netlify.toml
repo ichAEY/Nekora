@@ -1,0 +1,10 @@
+# Independent pilot: Netlify static export. Does not change GitHub Pages production.
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "24"
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+  NEXT_PUBLIC_BASE_PATH = ""
+  NEXT_PUBLIC_SITE_URL = "https://lyudmila-nekora.tanem.ru/"
