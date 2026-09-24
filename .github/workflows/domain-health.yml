@@ -1,0 +1,69 @@
+name: TANEM domain health (Nekora vs Maria)
+on:
+  push:
+    paths:
+      - .github/workflows/domain-health.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Compare live DNS, TLS and Pages certificate state
+        shell: bash
+        run: |
+          set +e
+          echo "::group::GitHub Pages configuration"
+          for repo in ichAEY/Nekora ichAEY/TAN-0016; do
+            echo "=== $repo ==="
+            gh api "repos/$repo/pages" --jq '{cname: .cname, status: .status, build_type: .build_type, https_enforced: .https_enforced, https_certificate: .https_certificate}' 2>&1 || true
+          done
+          echo "::endgroup::"
+          echo "::group::Zone delegation and CA authorization"
+          dig +short NS tanem.ru
+          dig +short DS tanem.ru
+          dig +short CAA tanem.ru
+          dig +short CAA github.io
+          echo "::endgroup::"
+          for domain in maria.tanem.ru lyudmila-nekora.tanem.ru; do
+            echo "::group::DOMAIN $domain"
+            for resolver in default 1.1.1.1 8.8.8.8; do
+              echo "Resolver: $resolver"
+              if [ "$resolver" = default ]; then
+                dig "$domain" CNAME +noall +answer +comments
+                dig "$domain" A +noall +answer +comments
+                dig "$domain" AAAA +noall +answer +comments
+                dig "$domain" CAA +noall +answer +comments
+              else
+                dig @"$resolver" "$domain" CNAME +noall +answer +comments +time=3 +tries=1
+                dig @"$resolver" "$domain" A +noall +answer +comments +time=3 +tries=1
+                dig @"$resolver" "$domain" AAAA +noall +answer +comments +time=3 +tries=1
+              fi
+            done
+            for ns in $(dig +short NS tanem.ru); do
+              echo "Authoritative server: $ns"
+              dig @"$ns" "$domain" CNAME +noall +answer +authority +comments +norecurse
+              dig @"$ns" "$domain" A +noall +answer +authority +comments +norecurse
+              dig @"$ns" "$domain" AAAA +noall +answer +authority +comments +norecurse
+              dig @"$ns" "$domain" CAA +noall +answer +authority +comments +norecurse
+            done
+            echo "HTTP:"
+            curl -4 -sS -I -L --max-time 12 "http://$domain/" 2>&1 | head -20
+            echo "HTTPS with verification:"
+            curl -4 -sS -I -L --max-time 12 "https://$domain/" 2>&1 | head -25
+            echo "HTTPS ignoring certificate mismatch (diagnostic only):"
+            curl -4 -k -sS -I -L --max-time 12 "https://$domain/" 2>&1 | head -20
+            echo "TLS certificate:"
+            echo | openssl s_client -connect "$domain:443" -servername "$domain" 2>&1 | openssl x509 -noout -subject -issuer -startdate -enddate 2>&1
+            echo "::endgroup::"
+          done
+          echo "::group::Domain ownership TXT"
+          dig +short TXT _github-pages-challenge-ichAEY.tanem.ru @1.1.1.1
+          echo "::endgroup::
