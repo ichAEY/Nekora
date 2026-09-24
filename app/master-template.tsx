@@ -33,7 +33,7 @@ type Service = {
 };
 type ServiceGroup = { id: string; label: string; services: Service[] };
 type GalleryItem = { src: string; alt: string };
-type Review = { author: string; text: string; source?: string };
+type Review = { author: string; text: string; source?: string; date?: string };
 type Amenity = { title: string; text: string };
 type LocaleOption = { code: string; label: string };
 
@@ -67,7 +67,7 @@ const desktopGalleryModules = [galleryWorks.slice(0, 4), galleryWorks.slice(4, 8
 const desktopGallerySetCount = 3;
 const featuredWorks = galleryWorks.slice(0, 7);
 const lightboxItems = [...galleryWorks];
-const reviews = (site.reviews as Review[]).slice(0, 9);
+const reviews = site.reviews as Review[];
 const reviewSetCount = 5;
 const promotions = site.promotions as unknown[];
 const approvedAbout = aboutPreset(site);
@@ -120,6 +120,7 @@ export default function MasterTemplate() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [lightboxTransform, setLightboxTransform] = useState({ scale: 1, x: 0, y: 0 });
   const [reviewsPaused, setReviewsPaused] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [desktopGalleryPaused, setDesktopGalleryPaused] = useState(false);
   const [openStatus, setOpenStatus] = useState<{ isOpen: boolean | null; isWorkingDay?: boolean }>({
     isOpen: null,
@@ -433,7 +434,7 @@ export default function MasterTemplate() {
     };
   }, []);
 
-  const overlayOpen = bookingOpen || galleryOpen || lightboxIndex !== null;
+  const overlayOpen = bookingOpen || galleryOpen || lightboxIndex !== null || selectedReview !== null;
 
   useEffect(() => {
     if (!overlayOpen) return;
@@ -620,11 +621,12 @@ export default function MasterTemplate() {
   }, []);
 
   useEffect(() => {
-    if (!bookingOpen && !galleryOpen && lightboxIndex === null) return;
+    if (!bookingOpen && !galleryOpen && lightboxIndex === null && selectedReview === null) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (lightboxIndex !== null) setLightboxIndex(null);
+        else if (selectedReview !== null) setSelectedReview(null);
         else if (galleryOpen) setGalleryOpen(false);
         else setBookingOpen(false);
       }
@@ -642,7 +644,7 @@ export default function MasterTemplate() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bookingOpen, galleryOpen, lightboxIndex]);
+  }, [bookingOpen, galleryOpen, lightboxIndex, selectedReview]);
 
   const switchCategory = (next: string) => {
     setCategory(next);
@@ -1095,7 +1097,7 @@ export default function MasterTemplate() {
                   <span className="mct-lashes-line">{localizedMasterName} — {translatedText("ваш")}</span>
                   <em>
                     <span className="mct-lashes-line">мастер по <span className="mct-hero-led">LED</span> — </span>
-                    <span className="mct-lashes-line">наращивание ресниц</span>
+                    <span className="mct-lashes-line">наращиванию ресниц</span>
                   </em>
                 </>
               ) : (
@@ -1237,14 +1239,16 @@ export default function MasterTemplate() {
               onMouseLeave={() => { if (desktopGalleryPointerStartRef.current === null) resumeDesktopGallery(); }}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
-                if (event.pointerType === "mouse") event.preventDefault();
+                // A click must reach the photo button. Capture only after a real drag.
                 pauseDesktopGallery(event.clientX);
-                if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
               }}
               onPointerMove={(event) => {
                 if (!event.isPrimary || desktopGalleryPointerStartRef.current === null) return;
-                if (event.pointerType === "mouse") event.preventDefault();
                 moveDesktopGallery(event.clientX);
+                if (desktopGalleryWasDraggedRef.current) {
+                  if (event.pointerType === "mouse") event.preventDefault();
+                  if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
+                }
               }}
               onPointerUp={(event) => {
                 if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1520,6 +1524,7 @@ export default function MasterTemplate() {
         <section className="mct-reviews mct-reveal" id="mobile-reviews">
           <div className="mct-shell">
             <p className="mct-section-kicker">{translatedText("Отзывы")}</p><h2>{translatedText("Что говорят клиенты")}</h2>
+            <p className="mct-review-count">{reviews.length} {locale === "ru" ? "отзывов" : "reviews"}</p>
             {reviewsUrl ? <a className="mct-review-summary" href={reviewsUrl} target="_blank" rel="noopener noreferrer"><span>{translatedText("Все отзывы в")} {site.template.reviewSource || site.template.bookingProvider} →</span></a> : null}
             <p className="dct-review-drag-hint">{translatedText("Зажмите ленту мышью и двигайте в любую сторону")}</p>
             <div className="dct-review-controls" aria-label="Управление лентой отзывов">
@@ -1568,16 +1573,17 @@ export default function MasterTemplate() {
                       <div className="mct-review-pair" key={`${setIndex}-${review.author}`}>
                         <a
                           className={`mct-review-card mct-review-card-mobile${reviewIsLong ? " is-long" : ""}`}
-                          href={reviewsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href="#mobile-reviews"
                           tabIndex={setIndex === 2 ? 0 : -1}
                           draggable={false}
                           onDragStart={(event) => event.preventDefault()}
                           onClick={(event) => {
-                            if (!reviewWasDraggedRef.current) return;
                             event.preventDefault();
-                            reviewWasDraggedRef.current = false;
+                            if (reviewWasDraggedRef.current) {
+                              reviewWasDraggedRef.current = false;
+                              return;
+                            }
+                            setSelectedReview(review);
                           }}
                         >
                           <div className="dct-review-card-head mct-mobile-review-head">
@@ -1597,14 +1603,15 @@ export default function MasterTemplate() {
                           {reviewIsLong && (
                             <a
                               className="dct-review-continue"
-                              href={reviewsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              href="#mobile-reviews"
                               tabIndex={setIndex === 2 ? 0 : -1}
                               onClick={(event) => {
-                                if (!reviewWasDraggedRef.current) return;
                                 event.preventDefault();
-                                reviewWasDraggedRef.current = false;
+                                if (reviewWasDraggedRef.current) {
+                                  reviewWasDraggedRef.current = false;
+                                  return;
+                                }
+                                setSelectedReview(review);
                               }}
                             >{translatedText("Продолжить")} →</a>
                           )}
@@ -1731,7 +1738,6 @@ export default function MasterTemplate() {
 
         </div>
       </section>
-      <a className="mct-tanem-footer" href="https://tanem.ru/" target="_blank" rel="noopener noreferrer"><span className="tanem-mark">T</span><span className="tanem-credit">{translatedText("Создано в")} <strong>TANEM.ru</strong></span></a>
 
       <div className={`mct-sticky-wrap${stickyVisible && !galleryOpen && !bookingOpen ? " is-visible" : ""}`} aria-hidden={!stickyVisible || galleryOpen}>
         <a className="mct-sticky" href={bookingHref} target={siteBookingMode === "direct" ? "_blank" : undefined} rel={siteBookingMode === "direct" ? "noopener noreferrer" : undefined} onClick={handleBookingClick} tabIndex={stickyVisible && !galleryOpen && !bookingOpen ? 0 : -1}>
@@ -1774,6 +1780,18 @@ export default function MasterTemplate() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {selectedReview !== null && (
+        <div className="mct-review-detail-overlay" role="dialog" aria-modal="true" aria-label={locale === "ru" ? "Полный отзыв" : "Full review"} onClick={() => setSelectedReview(null)}>
+          <article className="mct-review-detail" onClick={(event) => event.stopPropagation()}>
+            <button className="mct-review-detail-close" type="button" onClick={() => setSelectedReview(null)} aria-label={translatedText("Закрыть")}>×</button>
+            <p className="mct-section-kicker">{translatedText("Отзывы")}</p>
+            <h3>{selectedReview.author}</h3>
+            <div className="mct-review-detail-meta"><span aria-label="5 из 5">★★★★★</span><small>{selectedReview.date || selectedReview.source || ""}</small></div>
+            <blockquote>{selectedReview.text}</blockquote>
+          </article>
         </div>
       )}
 

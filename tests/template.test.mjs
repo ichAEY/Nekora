@@ -25,7 +25,10 @@ test("Lyudmila Nekora client data is configured", () => {
   assert.equal(site.master.name, "Людмила");
   assert.equal(site.location.city, "Москва");
   assert.equal(site.contacts.phoneDisplay, "+7 (924) 825-21-25");
-  assert.equal(site.reviews.length, 0);
+  assert.equal(site.reviews.length, 17);
+  assert.equal(site.reputation.reviewCount, "17");
+  assert.match(site.images.favicon, /favicon-source\.png$/);
+  assert.ok(fs.existsSync("public/favicon-source.png"));
   assert.equal(site.images.gallery.length, 10);
   assert.equal(site.template.specialty, "lashes");
   assert.match(html, /<header class="mct-hero is-lashes"/);
@@ -202,9 +205,10 @@ test("approved About copy and skills are deterministic", () => {
   assert.equal(masterInitial(nails), "Н");
 });
 
-test("reviews are capped at nine and preserve author, source and verbatim text", () => {
-  assert.match(component, /site\.reviews as Review\[\]\)\.slice\(0, 9\)/);
-  assert.match(component, /type Review = \{ author: string; text: string; source\?: string \}/);
+test("client-supplied reviews preserve all 17 authors, source and verbatim text", () => {
+  assert.equal(site.reviews.length, 17);
+  assert.match(component, /const reviews = site\.reviews as Review\[\]/);
+  assert.match(component, /type Review = \{ author: string; text: string; source\?: string; date\?: string \}/);
   assert.match(component, /review\.source \|\| site\.template\.reviewSource/);
   assert.match(component, /aria-label="5 из 5">★★★★★/);
   assert.match(component, /<blockquote>«\{review\.text\}»<\/blockquote>/);

@@ -7,6 +7,7 @@ import "@fontsource/manrope/400.css";
 import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import "./template.css";
+import "./nekora-fixes.css";
 import site from "../site-data.mjs";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
   icons: {
     icon: site.images.favicon,
     shortcut: site.images.favicon,
+    apple: site.images.favicon,
   },
 };
 

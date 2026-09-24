@@ -1,3 +1,5 @@
+import reviews from "./reviews.mjs";
+
 const publicBase = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const assetBase = `${publicBase}/assets/lyudmila`;
 
@@ -90,14 +92,14 @@ export default {
 
   reputation: {
     rating: "5.0",
-    reviewCount: "",
+    reviewCount: String(reviews.length),
   },
 
   images: {
     logo: "",
     portrait: `${assetBase}/master.webp`,
     about: `${assetBase}/masterpc.webp`,
-    favicon: `${publicBase}/placeholder.svg`,
+    favicon: `${publicBase}/favicon-source.png`,
     heroDecoration: `${assetBase}/shablonLED.webp`,
     beforeAfter: [],
     gallery: [
@@ -149,6 +151,7 @@ export default {
       en: {
         "Некора Людмила": "Lyudmila Nekora",
         "Людмила": "Lyudmila",
+        "Отзывы клиентов": "Client reviews",
         "Мастер по LED-наращиванию ресниц": "LED eyelash extension specialist",
         "мастер по LED-наращиванию ресниц": "LED eyelash extension specialist",
         "LED-наращивание ресниц": "LED eyelash extensions",
@@ -181,7 +184,7 @@ export default {
     },
   },
 
-  reviews: [],
+  reviews,
   promotions: [],
   amenities: [],
 
