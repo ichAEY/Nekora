@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # Temporary: commit the repaired portfolio files back to this repository.
+  contents: read
   pages: write
   id-token: write
 
@@ -27,57 +27,17 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Repair images 2-6 that contain HEIC/JPEG instead of real WebP
-        shell: bash
+
+      - name: Verify portfolio photos 2-6 are genuine WebP
         run: |
-          set -euo pipefail
-          gallery=public/assets/lyudmila/portfolio
-          broken=()
-          for n in 02 03 04 05 06; do
-            photo="$gallery/galery000$n.webp"
-            test -s "$photo"
-            mime="$(file --mime-type --brief "$photo")"
-            echo "Portfolio $n: $mime"
-            if [ "$mime" != "image/webp" ]; then
-              broken+=("$photo")
-            fi
-          done
-          if [ "${#broken[@]}" -gt 0 ]; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends libheif-examples libheif-plugin-libde265 webp
-            tmp="$(mktemp -d)"
-            trap 'rm -rf "$tmp"' EXIT
-            for photo in "${broken[@]}"; do
-              mime="$(file --mime-type --brief "$photo")"
-              case "$mime" in
-                image/heic|image/heif|application/octet-stream)
-                  cp "$photo" "$tmp/source.heic"
-                  heif-convert "$tmp/source.heic" "$tmp/source.png"
-                  test -s "$tmp/source.png"
-                  input="$tmp/source.png"
-                  ;;
-                image/jpeg|image/png)
-                  input="$photo"
-                  ;;
-                *)
-                  echo "::error::Cannot convert $photo: unexpected type $mime"
-                  exit 1
-                  ;;
-              esac
-              cwebp -quiet -q 88 "$input" -o "$tmp/repaired.webp"
-              test -s "$tmp/repaired.webp"
-              mv "$tmp/repaired.webp" "$photo"
-              rm -f "$tmp/source.heic" "$tmp/source.png"
-              echo "Converted $photo -> $(file --mime-type --brief "$photo")"
-            done
-          fi
           python3 - <<'PY'
           from pathlib import Path
           for n in range(2, 7):
-              p = Path(f"public/assets/lyudmila/portfolio/galery{n:05d}.webp")
-              raw = p.read_bytes()[:12]
-              assert raw[:4] == b"RIFF" and raw[8:12] == b"WEBP", f"Not real WebP: {p}"
-              print(f"Validated WebP: {p}")
+              photo = Path(f"public/assets/lyudmila/portfolio/galery{n:05d}.webp")
+              data = photo.read_bytes()[:12]
+              if data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+                  raise SystemExit(f"Mislabelled image: {photo} must be converted to real WebP")
+              print(f"Validated WebP: {photo}")
           PY
       - name: Select GitHub preview as default build target
         run: node scripts/resolve-pages-target.mjs
@@ -131,19 +91,6 @@ jobs:
           cp out/index.html out/404.html
           touch out/.nojekyll
 
-      - name: Save repaired portfolio originals after successful export validation
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -- public/assets/lyudmila/portfolio/galery0000{2,3,4,5,6}.webp
-          if ! git diff --cached --quiet; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m "Fix mismatched HEIC portfolio photos 2-6: genuine WebP"
-            git push origin HEAD:main
-          else
-            echo "Gallery photos already have correct file signatures."
-          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
