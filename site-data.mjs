@@ -114,7 +114,7 @@ export default {
       "galery00009.webp",
       "galery00010.webp",
     ].map((file, index) => ({
-      src: `${assetBase}/portfolio/${file}`,
+      src: `${assetBase}/portfolio/${file}${index >= 1 && index <= 5 ? "?v=20260926-real-webp" : ""}`,
       alt: `Работа Людмилы Некоры — фото ${index + 1}`,
     })),
   },
