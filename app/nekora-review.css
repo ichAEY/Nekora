@@ -53,3 +53,18 @@
 .mct-review-card-mobile .mct-mobile-review-source {
   font-size: 9.35px !important;
 }
+
+
+/* Nekora desktop only: no floating TANEM mark and no duplicate mobile review cards. */
+@media (min-width: 768px) {
+  .mct-tanem-footer {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mct-review-pair > .mct-review-card.mct-review-card-mobile,
+  .mct-review-pair > .mct-review-card.mct-review-card-mobile.is-long {
+    display: none !important;
+  }
+}

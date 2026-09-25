@@ -336,6 +336,18 @@ export default function MasterTemplate() {
     const firstSet = track?.querySelector<HTMLElement>(".dct-gallery-set");
     if (!viewport || !track || !firstSet) return;
 
+    // A moving, clipped desktop carousel can keep off-screen lazy images unloaded.
+    // Request the ten distinct photos and mark all repeated frames as eager.
+    const preloadedPhotos = galleryWorks.map(({ src }) => {
+      const image = new Image();
+      image.src = src;
+      return image;
+    });
+    track.querySelectorAll<HTMLImageElement>(".dct-film-frame img").forEach((image) => {
+      image.loading = "eager";
+      image.decoding = "async";
+    });
+
     let frame = 0;
     let lastFrame = 0;
     const renderPosition = (nextOffset: number) => {
@@ -374,6 +386,7 @@ export default function MasterTemplate() {
     return () => {
       window.cancelAnimationFrame(frame);
       resizeObserver.disconnect();
+      preloadedPhotos.length = 0;
     };
   }, []);
 
