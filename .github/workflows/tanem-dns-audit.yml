@@ -1,0 +1,70 @@
+name: TANEM read-only DNS HTTPS audit
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/tanem-dns-audit.yml']
+permissions:
+  contents: read
+  pages: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read Pages, DNS and TLS without changing them
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          command -v dig
+          command -v jq
+          command -v openssl
+          echo "=== GITHUB PAGES REPOSITORY STATE ==="
+          printf "%s\n" tanem.ru maria.tanem.ru esmeralda.tanem.ru nekora.tanem.ru lyudmila-nekora.tanem.ru boshki-project.tanem.ru > /tmp/tanem-hosts
+          for repo in STLuxe TAN-0016 Beauty-Room-by-Esmeralda Studiya-Koloristiki-Yeleny-Bagdasaryan Nekora lyudmila-nekora boshki-project; do
+            echo "--- REPO=$repo ---"
+            url="https://api.github.com/repos/ichAEY/$repo/pages"
+            code=$(curl -sS --connect-timeout 4 --max-time 12 -o /tmp/tanem-api.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$url") || code="curl-error"
+            if [ "$code" != "200" ]; then
+              code=$(curl -sS --connect-timeout 4 --max-time 12 -o /tmp/tanem-api.json -w '%{http_code}' -H "Accept: application/vnd.github+json" "$url") || code="curl-error"
+            fi
+            echo "PAGES_HTTP=$code"
+            if [ "$code" = "200" ]; then
+              jq -c '{cname,html_url,status,build_type,https_certificate,source}' /tmp/tanem-api.json
+              cname=$(jq -r '.cname // empty' /tmp/tanem-api.json)
+              if [[ "$cname" =~ ^[A-Za-z0-9._-]+$ ]]; then printf "%s\n" "$cname" >>/tmp/tanem-hosts; fi
+              healthurl="$url/health"
+              hcode=$(curl -sS --connect-timeout 4 --max-time 12 -o /tmp/tanem-health.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$healthurl") || hcode="curl-error"
+              if [ "$hcode" != "200" ]; then
+                hcode=$(curl -sS --connect-timeout 4 --max-time 12 -o /tmp/tanem-health.json -w '%{http_code}' -H "Accept: application/vnd.github+json" "$healthurl") || hcode="curl-error"
+              fi
+              echo "HEALTH_HTTP=$hcode"
+              if [ "$hcode" = "200" ]; then jq -c '.' /tmp/tanem-health.json | head -c 3000; echo; fi
+            fi
+          done
+          echo "=== BASE NS CAA DS DNSSEC ==="
+          for typ in NS CAA DS DNSKEY; do
+            for server in 1.1.1.1 8.8.8.8; do
+              echo "tanem.ru TYPE=$typ SERVER=$server"
+              dig +time=3 +tries=1 @"$server" tanem.ru "$typ" +short || true
+            done
+          done
+          echo "=== PER-HOST PUBLIC AND AUTHORITATIVE DNS ==="
+          sort -u /tmp/tanem-hosts | while read -r host; do
+            echo "--- HOST=$host ---"
+            for typ in CNAME A AAAA CAA; do
+              for server in 1.1.1.1 8.8.8.8 ns1.reg.ru ns2.reg.ru; do
+                answer=$(dig +time=3 +tries=1 @"$server" "$host" "$typ" +short 2>&1)
+                if [ -z "$answer" ]; then answer=EMPTY; fi
+                echo "DNS server=$server type=$typ answer=$answer"
+              done
+            done
+            echo "=== TLS $host ==="
+            timeout 10 bash -c 'echo | openssl s_client -servername "$1" -connect "$1:443" 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName 2>&1' _ "$host" || true
+            for scheme in http https; do
+              code=$(curl -sS -o /dev/null -L --max-redirs 3 --connect-timeout 4 --max-time 12 -w '%{http_code};ssl_verify=%{ssl_verify_result};remote_ip=%{remote_ip}' "$scheme://$host/" 2>/dev/null) || code="$code;curl_nonzero"
+              echo "$scheme RESULT=$code"
+            done
+          done
+          echo "=== END TANEM READ-ONLY AUDIT ==="
