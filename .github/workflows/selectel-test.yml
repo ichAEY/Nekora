@@ -1,19 +1,21 @@
-name: TANEM Selectel test deploy
+name: Nekora — Selectel
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: tanem-selectel-test
+  group: nekora-selectel
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Build and upload test site
-    runs-on: ubuntu-latest
+    name: Build and publish Nekora
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -23,9 +25,10 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Build static site for the server root
+      - name: Build Nekora for its final domain
         env:
           NEXT_PUBLIC_BASE_PATH: ''
+          NEXT_PUBLIC_SITE_URL: 'https://nekora.tanem.ru/'
         run: |
           set -euo pipefail
           npm ci
@@ -61,7 +64,7 @@ jobs:
             tanem-deploy@135.106.229.21 \
             'test -w /var/www/tanem-test && command -v rsync >/dev/null'
 
-      - name: Publish only to the isolated test directory
+      - name: Publish Nekora to Selectel
         run: |
           set -euo pipefail
           rsync -az --delete \
