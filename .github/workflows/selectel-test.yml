@@ -1,0 +1,71 @@
+name: TANEM Selectel test deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanem-selectel-test
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and upload test site
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Build static site for the server root
+        env:
+          NEXT_PUBLIC_BASE_PATH: ''
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          test -s out/index.html
+          test -s out/assets/lyudmila/master.webp
+          test -s out/assets/lyudmila/masterpc.webp
+          for n in 2 3 4 5 6; do
+            printf -v img "out/assets/lyudmila/portfolio/galery%05d.webp" "$n"
+            test -s "$img"
+          done
+          if grep -q '/Nekora/_next/' out/index.html; then
+            echo "::error::Build still contains the GitHub Pages path."
+            exit 1
+          fi
+
+      - name: Configure SSH with verified host fingerprint
+        env:
+          DEPLOY_KEY: ${{ secrets.TANEM_SELECTEL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_KEY" || { echo "::error::Missing TANEM_SELECTEL_SSH_KEY repository secret"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/tanem_selectel_deploy
+          chmod 600 ~/.ssh/tanem_selectel_deploy
+          ssh-keyscan -T 10 -t ed25519 135.106.229.21 > ~/.ssh/known_hosts 2>/dev/null
+          ssh-keygen -lf ~/.ssh/known_hosts -E sha256 |
+            grep -F 'SHA256:MWw6jvFkfSnqQn9npxFFbGjp20D9HPrU+luB+Owt4u4' >/dev/null || {
+              echo "::error::Selectel host key changed; deployment stopped."
+              exit 1
+            }
+          ssh -i ~/.ssh/tanem_selectel_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            tanem-deploy@135.106.229.21 \
+            'test -w /var/www/tanem-test && command -v rsync >/dev/null'
+
+      - name: Publish only to the isolated test directory
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -i $HOME/.ssh/tanem_selectel_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            out/ tanem-deploy@135.106.229.21:/var/www/tanem-test/
+          curl --fail --silent --show-error --max-time 15 \
+            http://135.106.229.21/ >/dev/null
