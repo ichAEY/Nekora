@@ -70,5 +70,16 @@ jobs:
           rsync -az --delete \
             -e "ssh -i $HOME/.ssh/tanem_selectel_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
             out/ tanem-deploy@135.106.229.21:/var/www/tanem-test/
-          curl --fail --silent --show-error --max-time 15 \
-            http://135.106.229.21/ >/dev/null
+          # The bare IP can return 404 when Nginx uses name-based virtual hosts.
+          # Verify the uploaded export and check Nekora using its real hostname.
+          ssh -i ~/.ssh/tanem_selectel_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            tanem-deploy@135.106.229.21 \
+            'test -s /var/www/tanem-test/index.html'
+          html="$(curl --fail --silent --show-error --location --max-time 20 \
+            --resolve nekora.tanem.ru:80:135.106.229.21 \
+            --resolve nekora.tanem.ru:443:135.106.229.21 \
+            http://nekora.tanem.ru/)"
+          if [[ "$html" != *'site-root'* ]]; then
+            echo "::error::Nekora hostname did not serve the deployed site."
+            exit 1
+          fi
