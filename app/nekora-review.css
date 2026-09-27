@@ -68,3 +68,23 @@
     display: none !important;
   }
 }
+
+/* Match the Only for Masters review layout, with a modest extra gap
+   between the section heading and the carousel. No card mechanics change. */
+@media (max-width: 767px) {
+  .mct-reviews > .mct-review-viewport {
+    margin-top: 23px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mct-reviews > .mct-review-viewport {
+    margin-top: 50px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mct-reviews > .mct-review-viewport {
+    margin-top: 44px !important;
+  }
+}
