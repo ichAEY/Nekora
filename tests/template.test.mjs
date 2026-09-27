@@ -4,6 +4,7 @@ import test from "node:test";
 import site from "../site-data.mjs";
 import {
   aboutPreset,
+  bookingMode,
   categoryMode,
   collapsedServiceCounts,
   contactOptions,
@@ -11,6 +12,7 @@ import {
   heroPreset,
   masterInitial,
   SERVICE_PREVIEW_LIMIT,
+  serviceBookingUrl,
 } from "../template-rules.mjs";
 
 const html = fs.readFileSync("out/index.html", "utf8");
@@ -38,6 +40,25 @@ test("Lyudmila Nekora client data is configured", () => {
   assert.match(site.images.heroDecoration, /shablonLED\.webp$/);
   assert.equal(site.services.groups.length, 1);
   assert.equal(site.services.groups[0].services.length, 11);
+});
+
+test("Nekora booking CTAs and every service open Dikidi in a new tab", () => {
+  const url = "https://dikidi.net/2108855";
+  assert.equal(site.template.bookingProvider, "Dikidi");
+  assert.equal(site.links.bookingUrl, url);
+  assert.equal(bookingMode(site), "direct");
+  for (const group of site.services.groups) {
+    for (const service of group.services) {
+      assert.equal(serviceBookingUrl(service, site), url);
+    }
+  }
+  // Mobile service rows already use serviceHref; desktop cards must also use
+  // the direct-booking fallback instead of linking to an empty service.url.
+  assert.match(component, /className=\\{\\`dct-service-card[\\s\\S]*?href=\\{serviceHref\\(service\\)\\}/);
+  assert.match(component, /href=\\{serviceHref\\(service\\)\\}[\\s\\S]{0,250}target=\\{serviceBookingUrl\\(service, site\\) \\? "_blank" : undefined\\}/);
+  assert.match(component, /className="mct-main-cta" href=\\{bookingHref\\} target=\\{siteBookingMode === "direct" \\? "_blank" : undefined\\}/);
+  assert.match(component, /className="mct-final-cta" href=\\{bookingHref\\} target=\\{siteBookingMode === "direct" \\? "_blank" : undefined\\}/);
+  assert.match(component, /className="mct-sticky" href=\\{bookingHref\\} target=\\{siteBookingMode === "direct" \\? "_blank" : undefined\\}/);
 });
 
 test("the clean template uses one canonical stylesheet and runtime", () => {

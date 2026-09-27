@@ -1429,9 +1429,10 @@ export default function MasterTemplate() {
                       return (
                         <a
                           className={`dct-service-card${hasVariants ? " has-variants" : ""}${hasDescription ? " has-description" : ""}${descriptionExpanded ? " description-expanded" : ""}`}
-                          href={service.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={serviceHref(service)}
+                          target={serviceBookingUrl(service, site) ? "_blank" : undefined}
+                          rel={serviceBookingUrl(service, site) ? "noopener noreferrer" : undefined}
+                          onClick={(event) => handleServiceClick(event, service)}
                           aria-label={`${service.name} — открыть запись в ${site.template.bookingProvider}`}
                           key={serviceKey}
                         >
