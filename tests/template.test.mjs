@@ -52,13 +52,13 @@ test("Nekora booking CTAs and every service open Dikidi in a new tab", () => {
       assert.equal(serviceBookingUrl(service, site), url);
     }
   }
-  // Mobile service rows already use serviceHref; desktop cards must also use
-  // the direct-booking fallback instead of linking to an empty service.url.
-  assert.match(component, /className=\\{\\`dct-service-card[\\s\\S]*?href=\\{serviceHref\\(service\\)\\}/);
-  assert.match(component, /href=\\{serviceHref\\(service\\)\\}[\\s\\S]{0,250}target=\\{serviceBookingUrl\\(service, site\\) \\? "_blank" : undefined\\}/);
-  assert.match(component, /className="mct-main-cta" href=\\{bookingHref\\} target=\\{siteBookingMode === "direct" \\? "_blank" : undefined\\}/);
-  assert.match(component, /className="mct-final-cta" href=\\{bookingHref\\} target=\\{siteBookingMode === "direct" \\? "_blank" : undefined\\}/);
-  assert.match(component, /className="mct-sticky" href=\\{bookingHref\\} target=\\{siteBookingMode === "direct" \\? "_blank" : undefined\\}/);
+  // Desktop service cards must use the same direct-booking fallback as mobile.
+  const desktop = component.slice(component.indexOf('className={`dct-service-card'));
+  assert.ok(desktop.includes('href={serviceHref(service)}'));
+  assert.ok(desktop.includes('target={serviceBookingUrl(service, site) ? "_blank" : undefined}'));
+  assert.ok(component.includes('className="mct-main-cta" href={bookingHref} target={siteBookingMode === "direct" ? "_blank" : undefined}'));
+  assert.ok(component.includes('className="mct-final-cta" href={bookingHref} target={siteBookingMode === "direct" ? "_blank" : undefined}'));
+  assert.ok(component.includes('className="mct-sticky" href={bookingHref} target={siteBookingMode === "direct" ? "_blank" : undefined}'));
 });
 
 test("the clean template uses one canonical stylesheet and runtime", () => {
